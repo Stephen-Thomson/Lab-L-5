@@ -1,4 +1,4 @@
-import React, { FormEvent, useState, useEffect, useRef } from 'react'
+import React, { FormEvent, useState, useEffect } from 'react'
 import {
   Button,
   LinearProgress,
@@ -20,9 +20,12 @@ import { download } from 'nanoseek'
 import constants from '../utils/constants'
 import { SelectChangeEvent } from '@mui/material'
 
-interface DownloadFormProps { }
+// Add onDownloadSuccess prop to handle the downloaded image
+interface DownloadFormProps {
+  onDownloadSuccess: (url: string) => void; // Pass URL to parent
+}
 
-const DownloadForm: React.FC<DownloadFormProps> = () => {
+const DownloadForm: React.FC<DownloadFormProps> = ({ onDownloadSuccess }) => {
   const [overlayServiceURL, setOverlayServiceURL] = useState<string>('')
   const [overlayServiceURLs, setOverlayServiceURLs] = useState<string[]>(constants.confederacyURLs.map(x => x.toString()))
   const [downloadURL, setDownloadURL] = useState<string>('')
@@ -45,18 +48,18 @@ const DownloadForm: React.FC<DownloadFormProps> = () => {
     e.preventDefault()
     setLoading(true)
     try {
-      // TODO: Upload to make use of the nanoseek download function to download the file from an Overlay Service.
-      const { mimeType, data } = { mimeType: 'unknown', data: 'unknown' }
+      // Use the nanoseek download function to download the file from an Overlay Service.
+      const { mimeType, data } = await download({
+        UHRPUrl: downloadURL.trim() || '', // The UHRP URL from the user input
+        confederacyHost: overlayServiceURL.trim(), // The overlay service URL from the user input
+      });
 
       const blob = new Blob([data], { type: mimeType })
       const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = downloadURL.trim() || 'download'
 
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      // Trigger success callback to display the image
+      onDownloadSuccess(url)
+
     } catch (error) {
       toast.error('An error occurred during download')
     } finally {
@@ -163,6 +166,5 @@ const DownloadForm: React.FC<DownloadFormProps> = () => {
     </form>
   )
 }
-
 
 export default DownloadForm
